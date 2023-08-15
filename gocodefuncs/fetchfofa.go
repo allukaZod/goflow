@@ -66,10 +66,10 @@ func FetchFofa(p Runner, params map[string]interface{}) *FuncResult {
 
 	total := options.Size
 	count := 0
-	fofaCli.(*gofofa.Client).OnResults = func(results [][]string) {
+	gofofa.WithOnResults(func(results [][]string) {
 		count += len(results)
 		p.SetProgress(float64(count) / float64(total))
-	}
+	})
 
 	res, err = fofaCli.(*gofofa.Client).HostSearch(options.Query, options.Size, fields, gofofa.SearchOptions{Full: options.Full})
 	if err != nil {
