@@ -93,6 +93,10 @@ func JoinFofa(p Runner, params map[string]interface{}) *FuncResult {
 					fmt.Printf("Retry %d: %s\n", n, err.Error())
 				}),
 			)
+			// 三个retry都失败，停止当前任务
+			if err != nil {
+				panic(err)
+			}
 
 			if len(res) > 0 {
 				for i := range res {
