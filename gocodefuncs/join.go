@@ -68,8 +68,29 @@ func Join(p Runner, params map[string]interface{}) *FuncResult {
 			if f2Data != nil && f1Data != nil {
 				j := gjson.ParseBytes(f2Data)
 				k := gjson.ParseBytes(f1Data)
+				count := 0
+				startField := ""
 				k.ForEach(func(key1, value1 gjson.Result) bool {
 					field := key1.String()
+					if startField == field && count != 0 {
+						j.ForEach(func(key, value gjson.Result) bool {
+							field1 := key.String()
+							if !options.DotAsPath {
+								field1 = strings.ReplaceAll(field1, ".", "\\.")
+							}
+							line, err = sjson.Set(line, field1, value.Value())
+							if err != nil {
+								panic(fmt.Errorf("join error: %w", err))
+							}
+							return true
+						})
+						_, err = f.WriteString(line + "\n")
+					}
+					if count == 0 {
+						startField = field
+					}
+					count++
+
 					if !options.DotAsPath {
 						field = strings.ReplaceAll(field, ".", "\\.")
 					}
@@ -78,24 +99,24 @@ func Join(p Runner, params map[string]interface{}) *FuncResult {
 						panic(fmt.Errorf("join error: %w", err))
 					}
 
-					j.ForEach(func(key, value gjson.Result) bool {
-						field = key.String()
-						if !options.DotAsPath {
-							field = strings.ReplaceAll(field, ".", "\\.")
-						}
-						line, err = sjson.Set(line, field, value.Value())
-						if err != nil {
-							panic(fmt.Errorf("join error: %w", err))
-						}
-
-						_, err = f.WriteString(line)
-						return true
-					})
 					return true
 				})
 
+				// 最后一行
+				j.ForEach(func(key, value gjson.Result) bool {
+					field1 := key.String()
+					if !options.DotAsPath {
+						field1 = strings.ReplaceAll(field1, ".", "\\.")
+					}
+					line, err = sjson.Set(line, field1, value.Value())
+					if err != nil {
+						panic(fmt.Errorf("join error: %w", err))
+					}
+					return true
+				})
+				_, err = f.WriteString(line + "\n")
 			} else {
-				_, err = f.WriteString(line)
+				_, err = f.WriteString(line + "\n")
 			}
 		} else {
 			tempFile, err := utils.WriteTempFile(".json", func(f *os.File) error {
