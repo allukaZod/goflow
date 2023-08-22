@@ -65,8 +65,23 @@ func Join(p Runner, params map[string]interface{}) *FuncResult {
 
 			line := ""
 			line = joinFunc(f1Data, line)
-			line = joinFunc(f2Data, line)
-			_, err = f.WriteString(line)
+			if f2Data != nil {
+				j := gjson.ParseBytes(f2Data)
+				j.ForEach(func(key, value gjson.Result) bool {
+					field := key.String()
+					if !options.DotAsPath {
+						field = strings.ReplaceAll(field, ".", "\\.")
+					}
+					line, err = sjson.Set(line, field, value.Value())
+					if err != nil {
+						panic(fmt.Errorf("join error: %w", err))
+					}
+					_, err = f.WriteString(line)
+					return true
+				})
+			} else {
+				_, err = f.WriteString(line)
+			}
 		} else {
 			tempFile, err := utils.WriteTempFile(".json", func(f *os.File) error {
 				_, err := f.Write(f1Data)
