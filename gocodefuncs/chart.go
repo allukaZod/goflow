@@ -10,6 +10,7 @@ import (
 	"github.com/tidwall/gjson"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 )
 
 var (
@@ -34,7 +35,21 @@ func GenerateChart(p Runner, params map[string]interface{}) *FuncResult {
 	pieItems := make([]opts.PieData, 0)
 	//lineItems := make([]opts.LineData, 0)
 
+	var lines int64
+	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
+		panic(fmt.Errorf("ParseURL error: %w", err))
+	}
+	if lines == 0 {
+		return &FuncResult{}
+	}
+	var processed int64
+
 	err = utils.EachLineWithContext(p.GetContext(), p.GetLastFile(), func(line string) error {
+		defer func() {
+			atomic.AddInt64(&processed, 1)
+			p.SetProgress(float64(processed) / float64(lines))
+		}()
+
 		value := gjson.Get(line, "value")
 		count := gjson.Get(line, "count")
 		if !value.Exists() || !count.Exists() {

@@ -8,6 +8,7 @@ import (
 	"github.com/tidwall/sjson"
 	"os"
 	"strings"
+	"sync/atomic"
 )
 
 type joinParams struct {
@@ -41,6 +42,15 @@ func Join(p Runner, params map[string]interface{}) *FuncResult {
 			panic(err)
 		}
 	}
+
+	var lines int64
+	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
+		panic(fmt.Errorf("ParseURL error: %w", err))
+	}
+	if lines == 0 {
+		return &FuncResult{}
+	}
+	var processed int64
 
 	var fn string
 	fn, err = utils.WriteTempFile(".json", func(f *os.File) error {
@@ -85,6 +95,8 @@ func Join(p Runner, params map[string]interface{}) *FuncResult {
 							return true
 						})
 						_, err = f.WriteString(line + "\n")
+						atomic.AddInt64(&processed, 1)
+						p.SetProgress(float64(processed) / float64(lines))
 					}
 					if count == 0 {
 						startField = field

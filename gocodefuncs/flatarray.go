@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/tidwall/gjson"
 	"os"
+	"sync/atomic"
 )
 
 type flatParams struct {
@@ -38,9 +39,23 @@ func FlatArray(p Runner, params map[string]interface{}) *FuncResult {
 		panic(fmt.Errorf("flatArray: field cannot be empty"))
 	}
 
+	var lines int64
+	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
+		panic(fmt.Errorf("ParseURL error: %w", err))
+	}
+	if lines == 0 {
+		return &FuncResult{}
+	}
+	var processed int64
+
 	var fn string
 	fn, err = utils.WriteTempFile(".json", func(f *os.File) error {
 		return utils.EachLineWithContext(p.GetContext(), p.GetLastFile(), func(line string) error {
+			defer func() {
+				atomic.AddInt64(&processed, 1)
+				p.SetProgress(float64(processed) / float64(lines))
+			}()
+
 			for _, item := range gjson.Get(line, options.Field).Array() {
 				err = jsonArrayEnum(item, func(result gjson.Result) error {
 					if result.Str != "" {

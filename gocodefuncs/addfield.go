@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 )
 
 type addFieldFrom struct {
@@ -40,8 +41,22 @@ func AddField(p Runner, params map[string]interface{}) *FuncResult {
 
 	var addRegex *regexp.Regexp
 
+	var lines int64
+	var processed int64
+	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
+		panic(fmt.Errorf("ParseURL error: %w", err))
+	}
+	if lines == 0 {
+		return &FuncResult{}
+	}
+
 	var newLines []string
 	err = utils.EachLineWithContext(p.GetContext(), p.GetLastFile(), func(line string) error {
+		defer func() {
+			atomic.AddInt64(&processed, 1)
+			p.SetProgress(float64(processed) / float64(lines))
+		}()
+
 		var newLine string
 		if options.Value != nil {
 			addValue := ExpendVarWithJsonLine(p, *options.Value, line)

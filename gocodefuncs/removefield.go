@@ -6,6 +6,7 @@ import (
 	"github.com/tidwall/sjson"
 	"os"
 	"strings"
+	"sync/atomic"
 )
 
 // RemoveField 移除字段
@@ -16,10 +17,25 @@ func RemoveField(p Runner, params map[string]interface{}) *FuncResult {
 
 	fields := strings.Split(params["fields"].(string), ",")
 
-	var fn string
+	var lines int64
 	var err error
+	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
+		panic(fmt.Errorf("ParseURL error: %w", err))
+	}
+	if lines == 0 {
+		return &FuncResult{}
+	}
+	var processed int64
+
+	var fn string
+
 	fn, err = utils.WriteTempFile(".json", func(f *os.File) error {
 		return utils.EachLineWithContext(p.GetContext(), p.GetLastFile(), func(line string) error {
+			defer func() {
+				atomic.AddInt64(&processed, 1)
+				p.SetProgress(float64(processed) / float64(lines))
+			}()
+
 			var err error
 			newLine := line
 			for _, field := range fields {

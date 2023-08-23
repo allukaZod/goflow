@@ -9,6 +9,7 @@ import (
 	"github.com/xuri/excelize/v2"
 	"log"
 	"strings"
+	"sync/atomic"
 )
 
 type toExcelParam struct {
@@ -46,6 +47,14 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 		}
 	}
 
+	var lines int64
+	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
+		panic(fmt.Errorf("ParseURL error: %w", err))
+	}
+	if lines == 0 {
+		return &FuncResult{}
+	}
+
 	// 创建空白单元格样式
 	style, err := f.NewStyle(&excelize.Style{
 		Border: []excelize.Border{
@@ -65,7 +74,12 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 	}
 
 	lineNum := 0
+	var processed int64
 	err = utils.EachLineWithContext(context.TODO(), formattedFile, func(line string) error {
+		defer func() {
+			atomic.AddInt64(&processed, 1)
+			p.SetProgress(float64(processed) / float64(lines))
+		}()
 		lineNum++
 		if options.JsonFormat {
 			err = jsonFormatToExcel(f, line, lineNum)

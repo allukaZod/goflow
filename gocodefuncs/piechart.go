@@ -9,6 +9,7 @@ import (
 	"github.com/tidwall/gjson"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 )
 
 type pieChartParams struct {
@@ -26,8 +27,22 @@ func PieChart(p Runner, params map[string]interface{}) *FuncResult {
 		panic(err)
 	}
 
+	var lines int64
+	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
+		panic(fmt.Errorf("ParseURL error: %w", err))
+	}
+	if lines == 0 {
+		return &FuncResult{}
+	}
+	var processed int64
+
 	pieData := make(map[string]int64)
 	err = utils.EachLineWithContext(p.GetContext(), p.GetLastFile(), func(line string) error {
+		defer func() {
+			atomic.AddInt64(&processed, 1)
+			p.SetProgress(float64(processed) / float64(lines))
+		}()
+
 		name := gjson.Get(line, options.Name)
 		if !name.Exists() {
 			return fmt.Errorf(`pie chart data is invalid: %s is needed`, options.Name)
