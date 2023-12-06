@@ -49,7 +49,7 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 
 	var lines int64
 	if lines, err = utils.FileLines(p.GetLastFile()); err != nil {
-		panic(fmt.Errorf("ParseURL error: %w", err))
+		panic(fmt.Errorf("ToExcel error: %w", err))
 	}
 	if lines == 0 {
 		return &FuncResult{}
@@ -140,13 +140,23 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 			})
 		} else {
 			lineNo := 2
+			streamWriter, err := f.NewStreamWriter("Sheet1")
 			err = utils.EachLineWithContext(p.GetContext(), formattedFile, func(line string) error {
 				v := gjson.Parse(line)
 				colNo := 'A'
+
 				v.ForEach(func(key, value gjson.Result) bool {
-					// 设置第一行
+
+					//// 设置第一行
+					//if lineNo == 2 {
+					//	err = f.SetCellValue("Sheet1", fmt.Sprintf("%c%d", colNo, lineNo-1), key.Value())
+					//}
 					if lineNo == 2 {
-						err = f.SetCellValue("Sheet1", fmt.Sprintf("%c%d", colNo, lineNo-1), key.Value())
+						if err = streamWriter.SetRow(fmt.Sprintf("%c%d", colNo, lineNo-1),
+							[]interface{}{excelize.Cell{Value: key.Value()}},
+							excelize.RowOpts{Height: 45, Hidden: false}); err != nil {
+							log.Println(err)
+						}
 					}
 
 					// 如果配置了写入图片项，直接设置图片
@@ -169,12 +179,19 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 					}
 
 					// 写值
-					err = f.SetCellValue("Sheet1", fmt.Sprintf("%c%d", colNo, lineNo), value.Value())
-					colNo++
-					if err != nil {
+					//err = f.SetCellValue("Sheet1", fmt.Sprintf("%c%d", colNo, lineNo), value.Value())
+					if err = streamWriter.SetRow(fmt.Sprintf("%c%d", colNo, lineNo),
+						[]interface{}{excelize.Cell{Value: value.Value()}},
+						excelize.RowOpts{Height: 45, Hidden: false}); err != nil {
 						panic(fmt.Errorf("SetCellValue failed: %w", err))
 					}
+
+					colNo++
+					//if err != nil {
+					//	panic(fmt.Errorf("SetCellValue failed: %w", err))
+					//}
 					return true
+
 				})
 				lineNo++
 				return err
@@ -182,6 +199,7 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 			if err != nil {
 				panic(fmt.Errorf("toExcel failed: %w", err))
 			}
+			streamWriter.Flush()
 		}
 		return nil
 	})
@@ -255,6 +273,7 @@ func formatWriteCell(f *excelize.File, sheetName string, row, cols int, value gj
 	return nil
 }
 
+// jsonFormatToExcel 将嵌套json转化为单页的excel格式
 func jsonFormatToExcel(f *excelize.File, line string, lineNum int) (err error) {
 	currentRow := 0
 	v := gjson.ParseBytes([]byte(line))
