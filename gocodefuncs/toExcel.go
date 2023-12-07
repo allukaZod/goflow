@@ -75,6 +75,7 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 
 	lineNum := 0
 	var processed int64
+	streamWriter, err := f.NewStreamWriter("Sheet1")
 	err = utils.EachLineWithContext(context.TODO(), formattedFile, func(line string) error {
 		defer func() {
 			atomic.AddInt64(&processed, 1)
@@ -140,14 +141,13 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 			})
 		} else {
 			lineNo := 2
-			streamWriter, err := f.NewStreamWriter("Sheet1")
 			err = utils.EachLineWithContext(p.GetContext(), formattedFile, func(line string) error {
 				v := gjson.Parse(line)
 				colNo := 'A'
 
 				v.ForEach(func(key, value gjson.Result) bool {
 
-					//// 设置第一行
+					// 设置第一行
 					//if lineNo == 2 {
 					//	err = f.SetCellValue("Sheet1", fmt.Sprintf("%c%d", colNo, lineNo-1), key.Value())
 					//}
@@ -199,13 +199,13 @@ func ToExcel(p Runner, params map[string]interface{}) *FuncResult {
 			if err != nil {
 				panic(fmt.Errorf("toExcel failed: %w", err))
 			}
-			streamWriter.Flush()
 		}
 		return nil
 	})
 	if err != nil {
 		return nil
 	}
+	streamWriter.Flush()
 
 	// todo: auto merge 选项，检查（上下、左右）相邻的多个格子，如果内容一致则进行合并操作
 	//autoMergeExcel(f)

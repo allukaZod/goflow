@@ -1,9 +1,12 @@
 package gocodefuncs
 
 import (
+	"bufio"
+	"fmt"
 	"github.com/LubyRuffy/goflow/utils"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -150,4 +153,44 @@ func TestToExcel1(t *testing.T) {
 			t.Logf("output file: %s", got.Artifacts[0].FilePath)
 		})
 	}
+}
+
+func TestToExcelBenchmark(t *testing.T) {
+	benchmark := testing.Benchmark(func(b *testing.B) {
+		// 读取文件 toExcel_input.json 逐行读取json数据，写到 inputJson 中
+		jsonLines, err := readJSONLines("toExcel_input.json")
+		if err != nil {
+			t.Fatalf("无法读取 JSON 文件: %v", err)
+		}
+
+		inputJson := strings.Join(jsonLines, "\n")
+		p := newTestRunner(t, inputJson)
+		got := ToExcel(p, map[string]interface{}{
+			"rawFormat":  false,
+			"insertPic":  false,
+			"jsonFormat": false,
+		})
+		assert.NotNil(t, got.Artifacts)
+		t.Logf("output file: %s", got.Artifacts[0].FilePath)
+	})
+	fmt.Println(benchmark)
+}
+
+func readJSONLines(filePath string) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("无法打开文件: %v", err)
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("读取文件时发生错误: %v", err)
+	}
+
+	return lines, nil
 }
