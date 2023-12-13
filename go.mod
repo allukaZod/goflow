@@ -3,7 +3,7 @@ module github.com/LubyRuffy/goflow
 go 1.18
 
 require (
-	github.com/LubyRuffy/gofofa v0.1.13
+	github.com/LubyRuffy/gofofa v0.1.14
 	github.com/Ullaakut/nmap/v2 v2.2.0
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.16.0
