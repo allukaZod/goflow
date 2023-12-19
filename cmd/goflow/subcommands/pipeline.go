@@ -83,7 +83,7 @@ func pipelineAction(ctx *cli.Context) error {
 			if name == gocodefuncs.FofaObjectName {
 				fofaCli, err := gofofa.NewClient()
 				if err != nil {
-					panic(fmt.Errorf("fofa connect err: %w", err))
+					panic(fmt.Errorf("fofa connect err2: %w, %s=%s", err, fofaCli.Key, fofaCli.Email))
 				}
 				return fofaCli, true
 			}

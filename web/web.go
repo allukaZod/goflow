@@ -191,7 +191,7 @@ func run(w http.ResponseWriter, r *http.Request) {
 				case gocodefuncs.FofaObjectName:
 					fofaCli, err := gofofa.NewClient()
 					if err != nil {
-						panic(fmt.Errorf("fofa connect err: %w", err))
+						panic(fmt.Errorf("fofa connect err4: %w, %s=%s", err, fofaCli.Key, fofaCli.Email))
 					}
 					return fofaCli, true
 				}
