@@ -142,6 +142,14 @@ func TestToExcel1(t *testing.T) {
 				inputJson: "{\"url\":\"http://www.123.com\",\"1_filepath\":\"1.png\",\"2_filepath\":\"2.png\"}",
 			},
 		},
+		{
+			name: "测试json自动格式化，列表格式化",
+			args: args{params: map[string]interface{}{
+				"jsonFormat": true,
+			},
+				inputJson: "{\"月更新总数\": {\"fofa\": 943,\"zoomeye\": 335,\"hunter\": 7500,\"quake\": 2217},\"年更新总数\": [4830, 2530, 14225, 7509]}",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

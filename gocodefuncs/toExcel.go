@@ -341,9 +341,11 @@ func jsonFormatToExcel(f *excelize.File, line string, lineNum int) (err error) {
 			}
 
 			// 处理 value with key
+			var needMerge bool
 			value.ForEach(func(k, v gjson.Result) bool {
-				cols = 0
 				if v.IsObject() {
+					needMerge = true
+					cols = 0
 					// object 按照上述输出
 					v.ForEach(func(innerKey, innerValue gjson.Result) bool {
 						if currentRow == startRow {
@@ -376,6 +378,14 @@ func jsonFormatToExcel(f *excelize.File, line string, lineNum int) (err error) {
 					return true
 				} else {
 					// 非 object，直接输出
+					/**
+					列表形式：
+					 "c_title": [
+					        11,
+					        23
+					    ]
+					|c_title| 11  |    23   |
+					*/
 					if k.Raw != "" && k.Exists() {
 						err = formatWriteCell(f, sheetName, currentRow, cols, k)
 						if err != nil {
@@ -386,25 +396,32 @@ func jsonFormatToExcel(f *excelize.File, line string, lineNum int) (err error) {
 							return false
 						}
 					} else {
-						err = formatWriteCell(f, sheetName, currentRow, cols, key)
-						if err != nil {
-							return false
+						if cols == 0 {
+							err = formatWriteCell(f, sheetName, currentRow, cols, key)
+							if err != nil {
+								return false
+							}
+							cols++
 						}
-						err = formatWriteCell(f, sheetName, currentRow, cols+1, v)
+						err = formatWriteCell(f, sheetName, currentRow, cols, v)
 						if err != nil {
 							return false
 						}
 					}
-					currentRow += 1
+					cols++
 					return true
 				}
 			})
 
-			// value 处理完成，合并最左边的标题
-			err = f.MergeCell(sheetName, fmt.Sprintf("A%d", startRow+1), fmt.Sprintf("A%d", currentRow))
-			if err != nil {
-				log.Printf("merge cell failed %s", err.Error())
-				return false
+			if needMerge {
+				// value 处理完成，合并最左边的标题
+				err = f.MergeCell(sheetName, fmt.Sprintf("A%d", startRow+1), fmt.Sprintf("A%d", currentRow))
+				if err != nil {
+					log.Printf("merge cell failed %s", err.Error())
+					return false
+				}
+			} else {
+				currentRow++
 			}
 		} else if value.IsObject() {
 			/**
