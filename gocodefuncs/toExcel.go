@@ -277,7 +277,7 @@ func formatWriteCell(f *excelize.File, sheetName string, row, cols int, value gj
 	}
 	// 写入内容
 	err = f.SetCellValue(sheetName, fmt.Sprintf("%c%d", colNo+int32(cols), row+1),
-		value.String())
+		value.Value())
 	if err != nil {
 		return fmt.Errorf("ToExcel SetCellValue failed: %w", err)
 	}
